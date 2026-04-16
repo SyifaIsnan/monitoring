@@ -259,7 +259,7 @@ export default function DashboardSmartPay() {
                   {liveAlerts.map((a, i) => (
                     <tr key={i} style={{ borderBottom: i < liveAlerts.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
                        <td style={{ padding: '12px 0', fontSize: 12, color: '#ef4444', fontFamily: 'monospace', width: '70px' }}>{a.time}</td>
-                       <td style={{ padding: '12px 0', fontSize: 12, color: a.type === 'critical' || a.type === 'danger' ? '#b91c1c' : '#b45309', fontWeight: 500 }}>
+                       <td style={{ padding: '12px 0', fontSize: 12, color: a.type === 'critical' || a.type === 'danger' ? '#646464' : '#646464', fontWeight: 500 }}>
                           <span style={{display: 'block', fontWeight: 'bold'}}>{a.title}</span>
                           <span style={{fontSize: 11, color: 'var(--text-muted)', fontWeight: 'normal'}}>{a.desc}</span>
                        </td>
