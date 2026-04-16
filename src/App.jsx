@@ -26,7 +26,7 @@ export default function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/aizar" element={<Aizar />} />
             <Route path="/nadya" element={<Nadya />} />
-            <Route path="/zaki" element={<Zaki />} />
+            <Route path="/zaki" element={<NotFound />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </div>
