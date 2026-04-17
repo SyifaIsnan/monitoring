@@ -13,6 +13,29 @@ const CPU_INIT = genHistory(42, 28);
 const RAM_INIT = genHistory(67, 18);
 const DISK_INIT = genHistory(55, 8);
 
+/* ── Data Statis Baru (Containers & Logs) ──────────────── */
+const CONTAINERS = [
+  { name: 'smartcity-api-go', image: 'golang:1.21-alpine', status: 'Up 4 days', cpu: 12.4, ram: '145MB' },
+  { name: 'laravel-backend', image: 'php:8.2-fpm', status: 'Up 4 days', cpu: 8.2, ram: '210MB' },
+  { name: 'prometheus', image: 'prom/prometheus', status: 'Up 14 days', cpu: 4.1, ram: '512MB' },
+  { name: 'grafana', image: 'grafana/grafana', status: 'Up 14 days', cpu: 1.2, ram: '120MB' },
+  { name: 'redis-cache', image: 'redis:alpine', status: 'Up 14 days', cpu: 0.8, ram: '64MB' },
+  { name: 'prometheus', image: 'prom/prometheus', status: 'Up 14 days', cpu: 4.1, ram: '512MB' },
+  { name: 'grafana', image: 'grafana/grafana', status: 'Up 14 days', cpu: 1.2, ram: '120MB' },
+  { name: 'redis-cache', image: 'redis:alpine', status: 'Up 14 days', cpu: 0.8, ram: '64MB' },
+
+];
+
+const LOG_MESSAGES = [
+  "systemd[1]: Started Laravel Schedule Queue.",
+  "sshd[412]: Accepted publickey for root from 192.168.1.44 port 51221 ssh2",
+  "kernel: [1245.12] Firewall: Blocked incoming connection on port 22",
+  "dockerd[899]: Container smartcity-api-go restarted successfully",
+  "nginx[1024]: 192.168.1.10 - - [GET /api/v1/metrics HTTP/1.1] 200",
+  "CRON[2011]: (root) CMD ( /usr/local/bin/backup.sh )",
+  "prometheus[503]: Scrape failed for target 10.0.0.5:9100",
+];
+
 /* ── Ring SVG ────────────────────────────────────────────── */
 function RingGauge({ pct, label, color, size = 160, stroke = 12 }) {
   const radius = (size - stroke) / 2;
@@ -69,24 +92,6 @@ function Sparkline({ data, color }) {
   );
 }
 
-/* ── Process Table ───────────────────────────────────────── */
-const PROCESSES = [
-  { name: 'nginx', pid: 1024, cpu: 8.2, mem: 2.1, status: 'running' },
-  { name: 'node (API)', pid: 2048, cpu: 22.4, mem: 18.7, status: 'running' },
-  { name: 'postgres', pid: 3072, cpu: 12.8, mem: 31.2, status: 'running' },
-  { name: 'redis-server', pid: 4096, cpu: 3.1, mem: 6.4, status: 'running' },
-  { name: 'python (ML)', pid: 5120, cpu: 44.7, mem: 28.9, status: 'high' },
-  { name: 'ffmpeg (CCTV)', pid: 6144, cpu: 18.3, mem: 12.1, status: 'running' },
-  { name: 'cron scheduler', pid: 7168, cpu: 0.4, mem: 0.8, status: 'running' },
-];
-
-/* ── Server Nodes ────────────────────────────────────────── */
-const SERVERS = [
-  { name: 'Server Utama', ip: '10.0.0.1', cpu: 42, ram: 67, disk: 55, net: '120 Mbps', os: 'Ubuntu 22.04 LTS', uptime: '142 hari' },
-  { name: 'Server Backup', ip: '10.0.0.2', cpu: 18, ram: 34, disk: 72, net: '45 Mbps', os: 'Ubuntu 22.04 LTS', uptime: '89 hari' },
-  { name: 'DB Server', ip: '10.0.0.3', cpu: 63, ram: 81, disk: 48, net: '88 Mbps', os: 'Debian 11', uptime: '201 hari' },
-];
-
 /* ── Network History ─────────────────────────────────────── */
 const NET_HISTORY = Array.from({ length: 20 }, (_, i) => ({
   t: `T-${20 - i}`,
@@ -101,8 +106,22 @@ export default function Zaki() {
   const [cpuHist, setCpuHist] = useState(CPU_INIT);
   const [ramHist, setRamHist] = useState(RAM_INIT);
   const [netHist, setNetHist] = useState(NET_HISTORY);
+  
+  // State Log Terminal
+  const [sysLogs, setSysLogs] = useState([
+    { time: new Date().toLocaleTimeString('id-ID'), msg: "System boot completed. Initializing services..." }
+  ]);
+  
   const [tick, setTick] = useState(0);
   const tickRef = useRef(0);
+  const logEndRef = useRef(null);
+
+  // Auto-scroll ke bawah saat log baru masuk
+  useEffect(() => {
+    if (logEndRef.current) {
+      logEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [sysLogs]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -117,6 +136,14 @@ export default function Zaki() {
       setCpuHist(prev => [...prev.slice(1), { t: `T-0`, val: cpu + (Math.random() - 0.5) * 8 }]);
       setRamHist(prev => [...prev.slice(1), { t: `T-0`, val: ram + (Math.random() - 0.5) * 3 }]);
       setNetHist(prev => [...prev.slice(1), { t: `T-0`, in: Math.random() * 80 + 20, out: Math.random() * 50 + 10 }]);
+
+      // Simulasi penambahan log terminal secara acak (chance 40% tiap 2 detik)
+      if (Math.random() > 0.6) {
+        const randomMsg = LOG_MESSAGES[Math.floor(Math.random() * LOG_MESSAGES.length)];
+        const newLog = { time: new Date().toLocaleTimeString('id-ID'), msg: randomMsg };
+        setSysLogs(prev => [...prev, newLog].slice(-15)); // Simpan 15 log terakhir
+      }
+
     }, 2000);
     return () => clearInterval(interval);
   }, [cpu, ram]);
@@ -133,12 +160,12 @@ export default function Zaki() {
 
   return (
     <>
-      <Topbar title="Zaki — Server Monitoring" subtitle="Pantau kondisi CPU, RAM, dan Disk server secara real-time" />
+      <Topbar title="Zaki — Server Monitoring" subtitle="Pantau kondisi CPU, RAM, Network, dan Container secara real-time" />
       <div className="page-content section-gap">
 
         {/* ── Banner Alert if Critical ───────────────────── */}
         {(cpuStatus === 'danger' || ramStatus === 'danger' || diskStatus === 'danger') && (
-          <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius)', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius)', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
             <svg width="20" height="20" fill="none" stroke="#ef4444" strokeWidth="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             <span style={{ fontWeight: 700, color: '#ef4444', fontSize: 14 }}>⚠ Peringatan Sistem</span>
             <span style={{ fontSize: 13, color: 'var(--foreground)' }}>Salah satu atau lebih resource server melampaui batas kritis. Segera periksa!</span>
@@ -164,7 +191,6 @@ export default function Zaki() {
                 { label: 'Core Aktif', value: '14/14' },
                 { label: 'Clock Speed', value: '3.2 GHz' },
                 { label: 'Temperature', value: `${(45 + cpu * 0.3).toFixed(0)}°C` },
-                { label: 'Proses Berjalan', value: `${PROCESSES.length}` },
                 { label: 'Load Average', value: `${(cpu / 14).toFixed(2)} ${(cpu / 14 * 0.9).toFixed(2)} ${(cpu / 14 * 0.8).toFixed(2)}` },
               ].map((r, i) => (
                 <div key={i} className="server-detail-row">
@@ -173,15 +199,6 @@ export default function Zaki() {
                 </div>
               ))}
             </div>
-            {cpu > 65 && (
-              <div className="alert-item warning" style={{ marginTop: 12, marginBottom: 0 }}>
-                <svg width="13" height="13" fill="none" stroke="#f59e0b" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                <div className="alert-text">
-                  <strong>CPU {cpu > 85 ? 'sangat tinggi' : 'tinggi'}</strong>
-                  <span>Pertimbangkan untuk {cpu > 85 ? 'segera menghentikan proses berat' : 'memantau proses berjalan'}</span>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* RAM */}
@@ -199,7 +216,6 @@ export default function Zaki() {
               {[
                 { label: 'Terpakai', value: `${(ram / 100 * 64).toFixed(1)} GB` },
                 { label: 'Tersedia', value: `${((100 - ram) / 100 * 64).toFixed(1)} GB` },
-                { label: 'Total', value: '64 GB' },
                 { label: 'Swap Used', value: '1.2 GB / 8 GB' },
                 { label: 'Cache', value: `${(ram * 0.08).toFixed(1)} GB` },
               ].map((r, i) => (
@@ -209,15 +225,6 @@ export default function Zaki() {
                 </div>
               ))}
             </div>
-            {ram > 65 && (
-              <div className={`alert-item ${ram > 85 ? 'danger' : 'warning'}`} style={{ marginTop: 12, marginBottom: 0 }}>
-                <svg width="13" height="13" fill="none" stroke={ram > 85 ? '#ef4444' : '#f59e0b'} strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                <div className="alert-text">
-                  <strong>RAM {ram > 85 ? 'hampir penuh!' : 'penggunaan tinggi'}</strong>
-                  <span>{ram > 85 ? 'Segera bebaskan memory atau tambah kapasitas' : 'Pantau aplikasi yang mengonsumsi banyak memory'}</span>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Disk */}
@@ -235,7 +242,6 @@ export default function Zaki() {
               {[
                 { label: 'Terpakai', value: `${(disk / 100 * 2).toFixed(2)} TB` },
                 { label: 'Tersedia', value: `${((100 - disk) / 100 * 2).toFixed(2)} TB` },
-                { label: 'Total', value: '2.00 TB' },
                 { label: 'I/O Read', value: '420 MB/s' },
                 { label: 'I/O Write', value: '280 MB/s' },
               ].map((r, i) => (
@@ -245,20 +251,11 @@ export default function Zaki() {
                 </div>
               ))}
             </div>
-            {disk > 65 && (
-              <div className={`alert-item ${disk > 85 ? 'danger' : 'warning'}`} style={{ marginTop: 12, marginBottom: 0 }}>
-                <svg width="13" height="13" fill="none" stroke={disk > 85 ? '#ef4444' : '#f59e0b'} strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                <div className="alert-text">
-                  <strong>Disk {disk > 85 ? 'hampir habis!' : 'penggunaan tinggi'}</strong>
-                  <span>{disk > 85 ? 'Segera hapus file tidak perlu atau ekspansi storage' : 'Pantau pertumbuhan data secara berkala'}</span>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* ── Row 2: Network + Processes ────────────────── */}
-        <div className="grid-2">
+        {/* ── Row 2: Network + Docker Containers (FITUR BARU 1) ── */}
+        <div className="grid-2" style={{ marginTop: 20 }}>
           {/* Network */}
           <div className="card animate-fade-up" style={{ animationDelay: '0.3s' }}>
             <div className="card-header">
@@ -268,7 +265,7 @@ export default function Zaki() {
               </div>
               <span className="badge badge-info">Real-time</span>
             </div>
-            <div style={{ height: 200 }}>
+            <div style={{ height: 230 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={netHist} margin={{ top: 5, right: 5, bottom: 0, left: -10 }}>
                   <defs>
@@ -292,82 +289,74 @@ export default function Zaki() {
             </div>
           </div>
 
-          {/* Process Table */}
+          {/* Docker Container Status */}
           <div className="card animate-fade-up" style={{ animationDelay: '0.36s' }}>
             <div className="card-header">
-              <div className="card-title">Top Processes</div>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Update tiap 2 detik</span>
+              <div>
+                <div className="card-title">Docker Containers Health</div>
+                <div className="card-subtitle">Microservices & monitoring tools</div>
+              </div>
+              <span className="badge badge-success"><span className="badge-dot" /> {CONTAINERS.length} Running</span>
             </div>
-            <table className="mini-table">
-              <thead>
-                <tr>
-                  <th>Proses</th>
-                  <th>PID</th>
-                  <th>CPU%</th>
-                  <th>MEM%</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {PROCESSES.map((p, i) => (
-                  <tr key={i}>
-                    <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, fontWeight: 500 }}>{p.name}</td>
-                    <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: 'var(--text-muted)' }}>{p.pid}</td>
-                    <td>
-                      <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, fontWeight: 700, color: p.cpu > 30 ? '#ef4444' : p.cpu > 15 ? '#f59e0b' : 'var(--foreground)' }}>
-                        {p.cpu.toFixed(1)}%
-                      </span>
-                    </td>
-                    <td style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>{p.mem.toFixed(1)}%</td>
-                    <td>
-                      <span className={`badge badge-${p.status === 'high' ? 'warning' : 'success'}`} style={{ fontSize: 10 }}>
-                        {p.status === 'high' ? 'Tinggi' : 'Running'}
-                      </span>
-                    </td>
+            <div style={{ overflowX: 'auto' }}>
+              <table className="mini-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: 10 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--card-border)', textAlign: 'left', color: 'var(--text-muted)' }}>
+                    <th style={{ padding: '8px 4px', fontSize: 11, fontWeight: 600 }}>CONTAINER</th>
+                    <th style={{ padding: '8px 4px', fontSize: 11, fontWeight: 600 }}>IMAGE</th>
+                    <th style={{ padding: '8px 4px', fontSize: 11, fontWeight: 600 }}>CPU %</th>
+                    <th style={{ padding: '8px 4px', fontSize: 11, fontWeight: 600 }}>MEM USAGE</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {CONTAINERS.map((c, i) => (
+                    <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '10px 4px' }}>
+                        <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, fontWeight: 600, color: '#3b82f6' }}>{c.name}</div>
+                        <div style={{ fontSize: 10, color: '#22c55e', marginTop: 2 }}>{c.status}</div>
+                      </td>
+                      <td style={{ padding: '10px 4px', fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: 'var(--text-muted)' }}>{c.image}</td>
+                      <td style={{ padding: '10px 4px' }}>
+                        <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, fontWeight: 600, color: c.cpu > 10 ? '#f59e0b' : 'var(--foreground)' }}>
+                          {c.cpu.toFixed(1)}%
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 4px', fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>{c.ram}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
-        {/* ── Row 3: Multi-Server Status ─────────────────── */}
-        <div className="card animate-fade-up" style={{ animationDelay: '0.42s' }}>
-          <div className="card-header">
-            <div className="card-title">Status Semua Server Node</div>
-            <span className="badge badge-success"><span className="badge-dot" /> {SERVERS.length} server online</span>
+        {/* ── Row 3: System Terminal Logs (FITUR BARU 2) ───── */}
+        <div className="card animate-fade-up" style={{ animationDelay: '0.42s', marginTop: 20, padding: 0, overflow: 'hidden', background: '#0f172a', border: '1px solid #334155' }}>
+          <div className="card-header" style={{ background: '#1e293b', borderBottom: '1px solid #334155', padding: '12px 20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+              <div className="card-title" style={{ color: '#f8fafc', fontSize: 14 }}>Live System Audit (/var/log/syslog)</div>
+            </div>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block', animation: 'blink 1.5s infinite' }} />
           </div>
-          <div className="grid-3">
-            {SERVERS.map((s, i) => (
-              <div key={i} style={{ background: 'var(--background)', borderRadius: 'var(--radius-sm)', padding: 16, border: '1px solid var(--card-border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--foreground)' }}>{s.name}</div>
-                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{s.ip}</div>
-                  </div>
-                  <span className="badge badge-success"><span className="badge-dot" />Online</span>
+          
+          <div style={{ padding: '16px 20px', height: 200, overflowY: 'auto', fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: '#38bdf8', lineHeight: 1.6 }}>
+            {sysLogs.map((log, index) => {
+              // Pewarnaan log sederhana berdasarkan kata kunci
+              let logColor = '#e2e8f0'; // default text
+              if (log.msg.includes('Blocked') || log.msg.includes('failed')) logColor = '#ef4444'; // merah
+              if (log.msg.includes('Accepted') || log.msg.includes('successfully')) logColor = '#22c55e'; // hijau
+              if (log.msg.includes('CRON')) logColor = '#f59e0b'; // kuning
+              
+              return (
+                <div key={index} style={{ marginBottom: 4 }}>
+                  <span style={{ color: '#64748b', marginRight: 12 }}>{log.time}</span>
+                  <span style={{ color: logColor }}>{log.msg}</span>
                 </div>
-                {[
-                  { label: 'CPU', val: s.cpu, color: s.cpu > 85 ? '#ef4444' : s.cpu > 65 ? '#f59e0b' : '#4072af' },
-                  { label: 'RAM', val: s.ram, color: s.ram > 85 ? '#ef4444' : s.ram > 65 ? '#f59e0b' : '#22c55e' },
-                  { label: 'Disk', val: s.disk, color: s.disk > 85 ? '#ef4444' : s.disk > 65 ? '#f59e0b' : '#f59e0b' },
-                ].map((r, j) => (
-                  <div key={j} className="progress-wrap" style={{ marginBottom: 10 }}>
-                    <div className="progress-header" style={{ marginBottom: 5 }}>
-                      <span className="progress-label" style={{ fontSize: 12 }}>{r.label}</span>
-                      <span className="progress-value" style={{ color: r.color, fontSize: 12 }}>{r.val}%</span>
-                    </div>
-                    <div className="progress-bar" style={{ height: 5 }}>
-                      <div className="progress-fill" style={{ width: `${r.val}%`, background: r.color }} />
-                    </div>
-                  </div>
-                ))}
-                <div style={{ display: 'flex', gap: 10, marginTop: 12, paddingTop: 10, borderTop: '1px dashed var(--card-border)', fontSize: 11, color: 'var(--text-muted)' }}>
-                  <span>🕒 Uptime: <b style={{ color: 'var(--foreground)' }}>{s.uptime}</b></span>
-                  <span>🌐 <b style={{ color: 'var(--foreground)' }}>{s.net}</b></span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
+            {/* Element dummy untuk target auto-scroll */}
+            <div ref={logEndRef} />
           </div>
         </div>
 

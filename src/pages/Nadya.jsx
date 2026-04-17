@@ -107,7 +107,7 @@ function CctvCam({ cam }) {
 
 /* ── Main Dashboard Component ───────────────────────────── */
 export default function DashboardMonitoring() {
-  const totalRegisterToday = 312; 
+  const [totalRegisterToday, setTotalRegisterToday] = useState(312); 
   const cctvAktif = CCTV_LIST.filter(c => c.status === 'aktif').length;
 
   const [activeUsers, setActiveUsers] = useState(142);
@@ -116,15 +116,14 @@ export default function DashboardMonitoring() {
   const [liveTrx, setLiveTrx] = useState([]);
   const [liveAlerts, setLiveAlerts] = useState([]);
   
-  // State untuk kontrol sorting tabel
-  const [sortMethod, setSortMethod] = useState('terbanyak'); // 'terbanyak' | 'az'
+  const [sortMethod, setSortMethod] = useState('terbanyak');
   
   const totalTransaksi = pieData.reduce((acc, curr) => acc + curr.value, 0);
   const maxSales = Math.max(...ticketSales.map(t => t.terjual));
 
-  // Helper untuk mendapatkan waktu saat ini
+  // FORMAT: Jam dan Menit Saja (HH:MM)
   const getCurrentTime = () => {
-    return new Date().toLocaleTimeString('id-ID', { hour12: false });
+    return new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false });
   };
 
   useEffect(() => {
@@ -140,63 +139,77 @@ export default function DashboardMonitoring() {
       { type: 'warning', title: 'Payment Gateway', desc: 'Latensi Bank BRI > 500ms', time: getCurrentTime() }
     ]);
 
-    // Fluktuasi User Aktif
+    // INTERVAL 1: Fluktuasi User & Registrasi (Per 1 Menit)
     const userInterval = setInterval(() => {
-      setActiveUsers(prev => {
-        const change = Math.floor(Math.random() * 5) - 2; 
-        return Math.max(1, prev + change);
-      });
-    }, 2000);
+      // User aktif naik turun
+      setActiveUsers(prev => Math.max(1, prev + (Math.floor(Math.random() * 21) - 10)));
+      // Register bertambah
+      setTotalRegisterToday(prev => prev + Math.floor(Math.random() * 5));
+    }, 60000);
 
-    // Simulasi Transaksi (Update per detik)
+    // INTERVAL 2: Simulasi Transaksi Batch (Per 1 Menit)
     const trxInterval = setInterval(() => {
-      const hasNewTransaction = Math.random() > 0.4; 
+      // Dalam 1 menit, simulasi ada 5-15 transaksi masuk sekaligus
+      const trxCount = Math.floor(Math.random() * 10) + 5; 
       
-      if (hasNewTransaction) {
+      let newBerhasil = 0;
+      let newPending = 0;
+      let newGagal = 0;
+      const newLogs = [];
+
+      for(let i=0; i<trxCount; i++) {
         const randStatus = Math.random();
         let statusTrx = 'berhasil';
-        let pieIndex = 0; 
 
-        if (randStatus > 0.85) {
+        if (randStatus > 0.9) {
           statusTrx = 'gagal';
-          pieIndex = 2;
-        } else if (randStatus > 0.7) {
+          newGagal++;
+        } else if (randStatus > 0.75) {
           statusTrx = 'pending';
-          pieIndex = 1;
+          newPending++;
+        } else {
+          newBerhasil++;
         }
 
-        // 1. Update Pie Chart
-        setPieData(prev => {
-          const newData = [...prev];
-          newData[pieIndex].value += 1;
-          return newData;
-        });
-
-        // 2. Update Live List
-        setLiveTrx(prev => {
+        // Ambil beberapa transaksi untuk ditampilkan di tabel log (maks 5 agar tidak kepanjangan)
+        if (newLogs.length < 5) {
           const email = DUMMY_EMAILS[Math.floor(Math.random() * DUMMY_EMAILS.length)];
-          const newLog = { time: getCurrentTime(), email, status: statusTrx };
-          return [newLog, ...prev].slice(0, 8); 
-        });
-
-        // 3. Update Tabel Tiket (Tidak diurutkan di sini, cukup update value)
-        if (statusTrx === 'berhasil') {
-          setTicketSales(prevSales => {
-            const newSales = [...prevSales];
-            const randomIndex = Math.floor(Math.random() * newSales.length);
-            newSales[randomIndex] = {
-              ...newSales[randomIndex],
-              terjual: newSales[randomIndex].terjual + 1
-            };
-            return newSales; 
-          });
+          newLogs.push({ time: getCurrentTime(), email, status: statusTrx });
         }
       }
-    }, 1000); 
 
-    // Simulasi Alert Error
+      // 1. Update Pie Chart secara kumulatif
+      setPieData(prev => [
+        { ...prev[0], value: prev[0].value + newBerhasil },
+        { ...prev[1], value: prev[1].value + newPending },
+        { ...prev[2], value: prev[2].value + newGagal },
+      ]);
+
+      // 2. Update Live List Table
+      setLiveTrx(prev => [...newLogs, ...prev].slice(0, 8));
+
+      // 3. Update Tabel Tiket Penjualan secara batch
+      setTicketSales(prevSales => {
+        const newSales = [...prevSales];
+        // Sebarkan jumlah tiket berhasil ke random destinasi
+        for(let i=0; i<newBerhasil; i++) {
+            const randomIndex = Math.floor(Math.random() * newSales.length);
+            // Tiap transaksi berhasil bisa berarti beli 1-4 tiket sekaligus
+            const qty = Math.floor(Math.random() * 4) + 1; 
+            newSales[randomIndex] = {
+              ...newSales[randomIndex],
+              terjual: newSales[randomIndex].terjual + qty
+            };
+        }
+        return newSales; 
+      });
+
+    }, 60000); 
+
+    // INTERVAL 3: Simulasi Alert Error (Per 1 Menit)
     const alertInterval = setInterval(() => {
-      const hasNewError = Math.random() > 0.7; 
+      // Probabilitas munculnya error tiap menit diset ke 40%
+      const hasNewError = Math.random() > 0.6; 
       if (hasNewError) {
         setLiveAlerts(prev => {
           const errIndex = Math.floor(Math.random() * DUMMY_ERRORS.length);
@@ -204,7 +217,7 @@ export default function DashboardMonitoring() {
           return [newAlert, ...prev].slice(0, 6); 
         });
       }
-    }, 4500);
+    }, 60000);
 
     return () => {
       clearInterval(userInterval);
@@ -215,12 +228,10 @@ export default function DashboardMonitoring() {
 
   // Memproses data untuk Tabel: Kalkulasi Rank & Pengurutan
   const getDisplayedTickets = () => {
-    // Langkah 1: Berikan ranking berdasarkan penjualan terbanyak
     const rankedData = [...ticketSales]
       .sort((a, b) => b.terjual - a.terjual)
       .map((item, index) => ({ ...item, rank: index + 1 }));
 
-    // Langkah 2: Urutkan hasil akhir sesuai filter pilihan user
     if (sortMethod === 'az') {
       return rankedData.sort((a, b) => a.wisata.localeCompare(b.wisata));
     }
@@ -237,9 +248,6 @@ export default function DashboardMonitoring() {
       default: return null;
     }
   };
-
-
-
 
   const getAlertBadge = (type) => {
     if (type === 'danger') {
@@ -270,7 +278,7 @@ export default function DashboardMonitoring() {
                 {activeUsers}
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block', animation: 'pulse-ring 2s infinite' }} />
               </div>
-              <div className="stat-change" style={{ color: 'var(--text-muted)' }}>Fluktuasi keluar/masuk</div>
+              <div className="stat-change" style={{ color: 'var(--text-muted)' }}>Fluktuasi per menit</div>
             </div>
           </div>
 
@@ -290,7 +298,7 @@ export default function DashboardMonitoring() {
               <div className="stat-value" style={{ fontFamily: 'JetBrains Mono, monospace', color: '#4072af' }}>
                 {totalTransaksi.toLocaleString()}
               </div>
-              <div className="stat-change up" style={{ color: '#4072af', fontWeight: 500 }}>Update per detik</div>
+              <div className="stat-change up" style={{ color: '#4072af', fontWeight: 500 }}>Update per menit</div>
             </div>
           </div>
         </div>
@@ -304,7 +312,6 @@ export default function DashboardMonitoring() {
             </div>
             <span className="badge badge-success"><span className="badge-dot" /> Streaming</span>
           </div>
-          {/* Grid responsif untuk CCTV */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
             {CCTV_LIST.map((cam, idx) => <CctvCam key={idx} cam={cam} />)}
           </div>
@@ -312,12 +319,13 @@ export default function DashboardMonitoring() {
 
         {/* ── 3. Live Logs: Transaksi & Alerts ──────────────────── */}
         <div className="grid-2" style={{ marginBottom: 20 }}>
+          
           {/* List Transaksi User */}
           <div className="card animate-fade-up" style={{ animationDelay: '0.32s' }}>
             <div className="card-header">
               <div>
                 <div className="card-title">Live Aktivitas Transaksi</div>
-                <div className="card-subtitle">Log aktivitas per detik</div>
+                <div className="card-subtitle">Log aktivitas per menit</div>
               </div>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4072af', display: 'inline-block', animation: 'pulse-ring 1s infinite' }} />
             </div>
@@ -345,7 +353,6 @@ export default function DashboardMonitoring() {
             </div>
           </div>
 
-          {/* List Alert Error */}
           {/* List Alert Error */}
           <div className="card animate-fade-up" style={{ animationDelay: '0.36s' }}>
             <div className="card-header">
@@ -384,14 +391,13 @@ export default function DashboardMonitoring() {
         {/* ── 4. Visualisasi Data: Tabel Pembelian & Pie Chart ──── */}
         <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr', gap: 20, marginBottom: 20 }}>
           
-          {/* Tabel Pembelian Tiket (Real-time Leaderboard) */}
+          {/* Tabel Pembelian Tiket */}
           <div className="card animate-fade-up" style={{ animationDelay: '0.4s' }}>
             <div className="card-header" style={{ alignItems: 'flex-start' }}>
               <div>
                 <div className="card-title">Pembelian Tiket per Wisata</div>
-                <div className="card-subtitle">Penjualan bertambah secara real-time</div>
+                <div className="card-subtitle">Penjualan bertambah per menit</div>
               </div>
-              {/* Dropdown Filter */}
               <select 
                 value={sortMethod} 
                 onChange={(e) => setSortMethod(e.target.value)}
@@ -405,12 +411,10 @@ export default function DashboardMonitoring() {
               </select>
             </div>
             
-            {/* Wrapper scroll: max height agar hanya muat ~5 baris */}
             <div style={{ maxHeight: 260, overflowY: 'auto', marginTop: 10, paddingRight: 4 }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ textAlign: 'left', fontSize: 12, color: 'var(--text-muted)' }}>
-                    {/* position: sticky untuk menjaga header tidak ikut ke-scroll */}
                     <th style={{ padding: '10px 8px', fontWeight: 600, position: 'sticky', top: 0, background: '#fff', zIndex: 10, borderBottom: '1px solid var(--card-border)' }}>Rank</th>
                     <th style={{ padding: '10px 8px', fontWeight: 600, position: 'sticky', top: 0, background: '#fff', zIndex: 10, borderBottom: '1px solid var(--card-border)' }}>Destinasi Wisata</th>
                     <th style={{ padding: '10px 8px', fontWeight: 600, position: 'sticky', top: 0, background: '#fff', zIndex: 10, borderBottom: '1px solid var(--card-border)' }}>Terjual</th>
@@ -449,7 +453,7 @@ export default function DashboardMonitoring() {
             </div>
           </div>
 
-          {/* Pie Chart (Kanan) */}
+          {/* Pie Chart */}
           <div className="card animate-fade-up" style={{ animationDelay: '0.44s' }}>
             <div className="card-header">
               <div>
