@@ -258,7 +258,7 @@ export default function DashboardMonitoring() {
 
   return (
     <>
-      <Topbar title="Dashboard Monitoring Live" subtitle="Monitoring user, transaksi, trending, dan CCTV real-time" />
+      <Topbar title="SmartCity Monitoring Center" subtitle="Monitoring user, transaksi, trending, dan CCTV real-time" />
       <div className="page-content section-gap">
 
         {/* ── 1. Top Stats Cards ────────────────────────────────── */}

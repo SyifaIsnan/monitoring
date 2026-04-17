@@ -16,7 +16,7 @@ const NAV = [
       },
       {
         path: '/aizar',
-        label: 'Aizar',
+        label: 'SmartPay',
         badge: '3',
         icon: (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -27,7 +27,7 @@ const NAV = [
       },
       {
         path: '/nadya',
-        label: 'Nadya',
+        label: 'SmartCity',
         badge: '1',
         icon: (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -38,7 +38,7 @@ const NAV = [
       },
       {
         path: '/zaki',
-        label: 'Zaki',
+        label: 'SmartDeploy',
         icon: (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/>

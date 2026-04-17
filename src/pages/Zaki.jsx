@@ -23,7 +23,6 @@ const CONTAINERS = [
   { name: 'prometheus', image: 'prom/prometheus', status: 'Up 14 days', cpu: 4.1, ram: '512MB' },
   { name: 'grafana', image: 'grafana/grafana', status: 'Up 14 days', cpu: 1.2, ram: '120MB' },
   { name: 'redis-cache', image: 'redis:alpine', status: 'Up 14 days', cpu: 0.8, ram: '64MB' },
-
 ];
 
 const LOG_MESSAGES = [
@@ -254,7 +253,7 @@ export default function Zaki() {
           </div>
         </div>
 
-        {/* ── Row 2: Network + Docker Containers (FITUR BARU 1) ── */}
+        {/* ── Row 2: Network + Docker Containers ── */}
         <div className="grid-2" style={{ marginTop: 20 }}>
           {/* Network */}
           <div className="card animate-fade-up" style={{ animationDelay: '0.3s' }}>
@@ -298,19 +297,21 @@ export default function Zaki() {
               </div>
               <span className="badge badge-success"><span className="badge-dot" /> {CONTAINERS.length} Running</span>
             </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table className="mini-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: 10 }}>
+            
+            {/* Wrapper Scroll (Membatasi Tinggi Tabel) */}
+            <div style={{ maxHeight: 220, overflowY: 'auto', overflowX: 'auto', marginTop: 10, paddingRight: 4 }}>
+              <table className="mini-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid var(--card-border)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                    <th style={{ padding: '8px 4px', fontSize: 11, fontWeight: 600 }}>CONTAINER</th>
-                    <th style={{ padding: '8px 4px', fontSize: 11, fontWeight: 600 }}>IMAGE</th>
-                    <th style={{ padding: '8px 4px', fontSize: 11, fontWeight: 600 }}>CPU %</th>
-                    <th style={{ padding: '8px 4px', fontSize: 11, fontWeight: 600 }}>MEM USAGE</th>
+                  <tr style={{ textAlign: 'left', color: 'var(--text-muted)' }}>
+                    <th style={{ padding: '8px 4px', fontSize: 11, fontWeight: 600, position: 'sticky', top: 0, background: 'var(--card-bg, #fff)', zIndex: 10, borderBottom: '1px solid var(--card-border)' }}>CONTAINER</th>
+                    <th style={{ padding: '8px 4px', fontSize: 11, fontWeight: 600, position: 'sticky', top: 0, background: 'var(--card-bg, #fff)', zIndex: 10, borderBottom: '1px solid var(--card-border)' }}>IMAGE</th>
+                    <th style={{ padding: '8px 4px', fontSize: 11, fontWeight: 600, position: 'sticky', top: 0, background: 'var(--card-bg, #fff)', zIndex: 10, borderBottom: '1px solid var(--card-border)' }}>CPU %</th>
+                    <th style={{ padding: '8px 4px', fontSize: 11, fontWeight: 600, position: 'sticky', top: 0, background: 'var(--card-bg, #fff)', zIndex: 10, borderBottom: '1px solid var(--card-border)' }}>MEM USAGE</th>
                   </tr>
                 </thead>
                 <tbody>
                   {CONTAINERS.map((c, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <tr key={i} style={{ borderBottom: i < CONTAINERS.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
                       <td style={{ padding: '10px 4px' }}>
                         <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, fontWeight: 600, color: '#3b82f6' }}>{c.name}</div>
                         <div style={{ fontSize: 10, color: '#22c55e', marginTop: 2 }}>{c.status}</div>
@@ -327,6 +328,7 @@ export default function Zaki() {
                 </tbody>
               </table>
             </div>
+            
           </div>
         </div>
 
