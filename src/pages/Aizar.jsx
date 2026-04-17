@@ -38,22 +38,25 @@ export default function DashboardSmartPay() {
   const [liveAlerts, setLiveAlerts] = useState([]);
   const [liveTransactions, setLiveTransactions] = useState([]);
 
-  // State Baru untuk System Health
+  // State untuk System Health
   const [nfcStatus, setNfcStatus] = useState('Online');
   const [apiLatency, setApiLatency] = useState(45);
   const [successRate, setSuccessRate] = useState(99.2);
   
-  // PENGGANTI MICROSERVICES -> SERVER RESOURCES
+  // State untuk SERVER RESOURCES
   const [serverResources, setServerResources] = useState({
     cpu: 32,
     ram: 68,
     network: 15.4
   });
 
-  const getCurrentTime = () => new Date().toLocaleTimeString('id-ID', { hour12: false });
+  // FORMAT: Jam dan Menit Saja (HH:MM)
+  const getCurrentTime = () => {
+    return new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false });
+  };
   const getChartTime = () => {
     const d = new Date();
-    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   };
 
   const formatRupiah = (number) => {
@@ -61,21 +64,22 @@ export default function DashboardSmartPay() {
   };
 
   useEffect(() => {
+    // Initial Data
     setLiveRegisters([
       { time: getCurrentTime(), name: 'Alex W.', phone: '+62 812-****-9901', status: 'verified' },
       { time: getCurrentTime(), name: 'Bambang P.', phone: '+62 857-****-1122', status: 'pending' },
     ]);
-    
     setLiveAlerts([
       { type: 'warning', title: 'QR Gagal', desc: 'Gagal membaca QR dari Merchant A', time: getCurrentTime() }
     ]);
-
     setLiveTransactions([
       { time: getCurrentTime(), user: 'Dina F.', action: 'Bayar QRIS Toko', type: 'payment', amount: 45000 },
       { time: getCurrentTime(), user: 'Rizky M.', action: 'Top Up VA BCA', type: 'topup', amount: 500000 },
     ]);
 
-    // Simulasi Metrics Fluktuatif (Tiap 2 detik)
+    // SEMUA INTERVAL DIUBAH JADI 60000ms (1 MENIT)
+    
+    // 1. Update Metrics Server per Menit
     const metricsInterval = setInterval(() => {
       setApiLatency(Math.floor(Math.random() * (120 - 30 + 1)) + 30);
       setSuccessRate(prev => {
@@ -84,73 +88,73 @@ export default function DashboardSmartPay() {
          return newVal > 100 ? 100 : newVal < 95 ? 96 : Number(newVal.toFixed(2));
       });
 
-      // Simulasi Fluktuasi Resource Server
       setServerResources({
          cpu: Math.floor(Math.random() * (85 - 20 + 1)) + 20,
          ram: Math.floor(Math.random() * (92 - 60 + 1)) + 60,
          network: Number((Math.random() * 40 + 5).toFixed(1))
       });
-    }, 2000);
+    }, 60000);
 
+    // 2. Update Registrasi per Menit (Nambah lebih dari 1 orang)
     const regInterval = setInterval(() => {
-      const hasNewUser = Math.random() > 0.5;
-      if (hasNewUser) {
-        setRegisterToday(prev => prev + 1);
-        setLiveRegisters(prev => {
-          const name = DUMMY_USERS[Math.floor(Math.random() * DUMMY_USERS.length)];
-          const phone = `+62 8${Math.floor(Math.random() * 90) + 10}-****-${Math.floor(Math.random() * 9000) + 1000}`;
-          const isVerified = Math.random() > 0.3;
-          const newReg = { time: getCurrentTime(), name, phone, status: isVerified ? 'verified' : 'pending' };
-          return [newReg, ...prev].slice(0, 6);
-        });
-      }
-    }, 3500);
+      const addedUsers = Math.floor(Math.random() * 10) + 5; // Nambah 5-14 user per menit
+      setRegisterToday(prev => prev + addedUsers);
+      
+      setLiveRegisters(prev => {
+        const name = DUMMY_USERS[Math.floor(Math.random() * DUMMY_USERS.length)];
+        const phone = `+62 8${Math.floor(Math.random() * 90) + 10}-****-${Math.floor(Math.random() * 9000) + 1000}`;
+        const isVerified = Math.random() > 0.3;
+        const newReg = { time: getCurrentTime(), name, phone, status: isVerified ? 'verified' : 'pending' };
+        return [newReg, ...prev].slice(0, 6);
+      });
+    }, 60000);
 
+    // 3. Update Transaksi per Menit
     const trxInterval = setInterval(() => {
-      const hasNewTrx = Math.random() > 0.3;
-      if (hasNewTrx) {
-        setLiveTransactions(prev => {
-          const user = DUMMY_USERS[Math.floor(Math.random() * DUMMY_USERS.length)];
-          const trxInfo = TRX_TYPES[Math.floor(Math.random() * TRX_TYPES.length)];
-          const rawAmount = Math.floor(Math.random() * (trxInfo.range[1] - trxInfo.range[0])) + trxInfo.range[0];
-          const amount = Math.round(rawAmount / 1000) * 1000; 
+      setLiveTransactions(prev => {
+        const user = DUMMY_USERS[Math.floor(Math.random() * DUMMY_USERS.length)];
+        const trxInfo = TRX_TYPES[Math.floor(Math.random() * TRX_TYPES.length)];
+        const rawAmount = Math.floor(Math.random() * (trxInfo.range[1] - trxInfo.range[0])) + trxInfo.range[0];
+        const amount = Math.round(rawAmount / 1000) * 1000; 
 
-          const newTrx = { time: getCurrentTime(), user, action: trxInfo.name, type: trxInfo.type, amount };
-          return [newTrx, ...prev].slice(0, 6);
-        });
-      }
-    }, 1500);
+        const newTrx = { time: getCurrentTime(), user, action: trxInfo.name, type: trxInfo.type, amount };
+        return [newTrx, ...prev].slice(0, 6);
+      });
+    }, 60000);
 
+    // 4. Update Cashflow per Menit
     const cashflowInterval = setInterval(() => {
       setLiveCashflow(prev => {
         const newData = [...prev.slice(1)];
         newData.push({
           time: getChartTime(),
-          pemasukan: Math.floor(Math.random() * 6000000) + 500000,
-          pengeluaran: Math.floor(Math.random() * 5000000) + 200000,
+          // Fluktuasi nominal per menit dibuat lebih besar
+          pemasukan: Math.floor(Math.random() * 8000000) + 2000000, 
+          pengeluaran: Math.floor(Math.random() * 7000000) + 1000000,
         });
         return newData;
       });
-      setActiveUsers(prev => prev + (Math.floor(Math.random() * 11) - 5));
-    }, 2000);
+      // Fluktuasi user aktif per menit
+      setActiveUsers(prev => prev + (Math.floor(Math.random() * 41) - 20)); 
+    }, 60000);
 
+    // 5. Update Alert per Menit (Jarang terjadi)
     const alertInterval = setInterval(() => {
-      const hasNewError = Math.random() > 0.6; 
+      const hasNewError = Math.random() > 0.8; 
       if (hasNewError) {
         setLiveAlerts(prev => {
           const errIndex = Math.floor(Math.random() * ERROR_TYPES.length);
           const newAlert = { ...ERROR_TYPES[errIndex], time: getCurrentTime() };
 
-          // Simulasi NFC Down jika ada alert NFC Mati
           if (newAlert.title === 'NFC Mati') {
             setNfcStatus('Offline');
-            setTimeout(() => setNfcStatus('Online'), 8000); // Auto recover dalam 8 detik
+            setTimeout(() => setNfcStatus('Online'), 60000); // Recover 1 menit kemudian
           }
 
           return [newAlert, ...prev].slice(0, 6);
         });
       }
-    }, 4000);
+    }, 60000);
 
     return () => {
       clearInterval(regInterval);
@@ -188,7 +192,7 @@ export default function DashboardSmartPay() {
       <Topbar title="SmartPay Monitoring Center" subtitle="Live analytics e-wallet: Registrasi, Cashflow, & System Health" />
       <div className="page-content section-gap" style={{ padding: 20 }}>
 
-        {/* ── 1. Top Stats Cards (Tetap dipertahankan gaya stat-card nya) ─── */}
+        {/* ── 1. Top Stats Cards ────────────────────────────────── */}
         <div className="grid-4" style={{ marginBottom: 20 }}>
           <div className="stat-card animate-fade-up" style={{ '--stat-color': '#3b82f6', '--stat-bg': 'rgba(59,130,246,.12)', animationDelay: '0s' }}>
             <div className="stat-info">
@@ -213,7 +217,7 @@ export default function DashboardSmartPay() {
             <div className="stat-info">
               <div className="stat-label">Volume Pemasukan (Live)</div>
               <div className="stat-value">Rp {((liveCashflow[liveCashflow.length-1]?.pemasukan || 0) / 1000000).toFixed(1)}M</div>
-              <div className="stat-change up">Per detik ini</div>
+              <div className="stat-change up">Per menit ini</div>
             </div>
           </div>
 
@@ -221,12 +225,12 @@ export default function DashboardSmartPay() {
             <div className="stat-info">
               <div className="stat-label">Volume Pengeluaran (Live)</div>
               <div className="stat-value">Rp {((liveCashflow[liveCashflow.length-1]?.pengeluaran || 0) / 1000000).toFixed(1)}M</div>
-              <div className="stat-change down" style={{ color: '#ef4444' }}>Per detik ini</div>
+              <div className="stat-change down" style={{ color: '#ef4444' }}>Per menit ini</div>
             </div>
           </div>
         </div>
 
-        {/* ── 2. System Health & Infrastructure (DESAIN BARU) ─────────── */}
+        {/* ── 2. System Health & Infrastructure ─────────── */}
         <div className="grid-4" style={{ marginBottom: 20 }}>
           
           {/* Card NFC Status */}
@@ -280,7 +284,7 @@ export default function DashboardSmartPay() {
           <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
             <div>
               <div className="card-title" style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>Live Cashflow Transaksi (Pemasukan vs Pengeluaran)</div>
-              <div className="card-subtitle" style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>Update fluktuasi per detik (Dalam Rupiah)</div>
+              <div className="card-subtitle" style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>Update fluktuasi per menit (Dalam Rupiah)</div>
             </div>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, background: 'rgba(16,185,129,0.1)', color: '#059669', padding: '4px 10px', borderRadius: 20, fontWeight: 600 }}>
                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }} /> Live Sync
