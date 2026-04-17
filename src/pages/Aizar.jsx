@@ -6,12 +6,20 @@ import {
 
 /* ── Data Statis & Initial State ────────────────────────── */
 
-const DUMMY_USERS = ['Budi S.', 'Siti A.', 'Rizky M.', 'Dina F.', 'Agus T.', 'Nisa R.', 'Hendra K.'];
+const DUMMY_USERS = ['Budi S.', 'Siti A.', 'Rizky M.', 'Dina F.', 'Agus T.', 'Nisa R.', 'Hendra K.', 'Zaki A.', 'Nadya P.'];
 const ERROR_TYPES = [
   { type: 'warning', title: 'Login Gagal', desc: 'Percobaan login gagal 3x (Salah PIN)' },
   { type: 'danger', title: 'Pembayaran Gagal', desc: 'Timeout dari Payment Gateway' },
   { type: 'warning', title: 'QR Gagal', desc: 'Gagal generate QRIS dinamis' },
   { type: 'critical', title: 'NFC Mati', desc: 'Service NFC Reader tidak merespon' },
+];
+
+const TRX_TYPES = [
+  { type: 'topup', name: 'Top Up VA BCA', range: [50000, 1500000] },
+  { type: 'topup', name: 'Top Up VA Mandiri', range: [50000, 1000000] },
+  { type: 'payment', name: 'Bayar QRIS Toko', range: [15000, 350000] },
+  { type: 'payment', name: 'Transfer Antar Bank', range: [50000, 2500000] },
+  { type: 'payment', name: 'Bayar Tagihan PLN', range: [100000, 800000] },
 ];
 
 // Data awal untuk grafik cashflow (Pemasukan vs Pengeluaran)
@@ -29,12 +37,18 @@ export default function DashboardSmartPay() {
   const [liveRegisters, setLiveRegisters] = useState([]);
   const [liveCashflow, setLiveCashflow] = useState(INITIAL_CASHFLOW);
   const [liveAlerts, setLiveAlerts] = useState([]);
+  const [liveTransactions, setLiveTransactions] = useState([]); // State baru untuk Top Up & Pay
 
   // Helper waktu
   const getCurrentTime = () => new Date().toLocaleTimeString('id-ID', { hour12: false });
   const getChartTime = () => {
     const d = new Date();
     return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+  };
+
+  // Helper Format Rupiah
+  const formatRupiah = (number) => {
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
   };
 
   useEffect(() => {
@@ -48,9 +62,14 @@ export default function DashboardSmartPay() {
       { type: 'warning', title: 'QR Gagal', desc: 'Gagal membaca QR dari Merchant A', time: getCurrentTime() }
     ]);
 
-    // Simulasi Registrasi User (Tiap 3 detik)
+    setLiveTransactions([
+      { time: getCurrentTime(), user: 'Dina F.', action: 'Bayar QRIS Toko', type: 'payment', amount: 45000 },
+      { time: getCurrentTime(), user: 'Rizky M.', action: 'Top Up VA BCA', type: 'topup', amount: 500000 },
+    ]);
+
+    // Simulasi Registrasi User (Tiap 3.5 detik)
     const regInterval = setInterval(() => {
-      const hasNewUser = Math.random() > 0.4;
+      const hasNewUser = Math.random() > 0.5;
       if (hasNewUser) {
         setRegisterToday(prev => prev + 1);
         setLiveRegisters(prev => {
@@ -58,15 +77,32 @@ export default function DashboardSmartPay() {
           const phone = `+62 8${Math.floor(Math.random() * 90) + 10}-****-${Math.floor(Math.random() * 9000) + 1000}`;
           const isVerified = Math.random() > 0.3;
           const newReg = { time: getCurrentTime(), name, phone, status: isVerified ? 'verified' : 'pending' };
-          return [newReg, ...prev].slice(0, 6); // Simpan 6 data terbaru
+          return [newReg, ...prev].slice(0, 6);
         });
       }
-    }, 3000);
+    }, 3500);
+
+    // Simulasi Aktivitas Transaksi (Tiap 1.5 detik)
+    const trxInterval = setInterval(() => {
+      const hasNewTrx = Math.random() > 0.3;
+      if (hasNewTrx) {
+        setLiveTransactions(prev => {
+          const user = DUMMY_USERS[Math.floor(Math.random() * DUMMY_USERS.length)];
+          const trxInfo = TRX_TYPES[Math.floor(Math.random() * TRX_TYPES.length)];
+          // Generate random amount within range, rounded to nearest 1000
+          const rawAmount = Math.floor(Math.random() * (trxInfo.range[1] - trxInfo.range[0])) + trxInfo.range[0];
+          const amount = Math.round(rawAmount / 1000) * 1000; 
+
+          const newTrx = { time: getCurrentTime(), user, action: trxInfo.name, type: trxInfo.type, amount };
+          return [newTrx, ...prev].slice(0, 6);
+        });
+      }
+    }, 1500);
 
     // Simulasi Cashflow Pemasukan & Pengeluaran (Tiap 2 detik)
     const cashflowInterval = setInterval(() => {
       setLiveCashflow(prev => {
-        const newData = [...prev.slice(1)]; // Hapus data paling kiri
+        const newData = [...prev.slice(1)];
         newData.push({
           time: getChartTime(),
           pemasukan: Math.floor(Math.random() * 6000000) + 500000,
@@ -74,7 +110,6 @@ export default function DashboardSmartPay() {
         });
         return newData;
       });
-      // Fluktuasi user aktif
       setActiveUsers(prev => prev + (Math.floor(Math.random() * 11) - 5));
     }, 2000);
 
@@ -85,13 +120,14 @@ export default function DashboardSmartPay() {
         setLiveAlerts(prev => {
           const errIndex = Math.floor(Math.random() * ERROR_TYPES.length);
           const newAlert = { ...ERROR_TYPES[errIndex], time: getCurrentTime() };
-          return [newAlert, ...prev].slice(0, 6); // Simpan 6 error terbaru
+          return [newAlert, ...prev].slice(0, 6);
         });
       }
     }, 4000);
 
     return () => {
       clearInterval(regInterval);
+      clearInterval(trxInterval);
       clearInterval(cashflowInterval);
       clearInterval(alertInterval);
     };
@@ -107,14 +143,20 @@ export default function DashboardSmartPay() {
   const getAlertBadge = (type) => {
     switch (type) {
       case 'critical': 
-        return <span className="badge" style={{ backgroundColor: '#7f1d1d', color: '#fca5a5', minWidth: 70, textAlign: 'center', fontSize: '11px', padding: '4px 8px' }}>Critical</span>;
+        return <span className="badge" style={{ backgroundColor: '#7f1d1d', color: '#fca5a5', minWidth: 60, textAlign: 'center', fontSize: '10px', padding: '3px 6px' }}>Critical</span>;
       case 'danger': 
-        return <span className="badge" style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: '#ef4444', minWidth: 70, textAlign: 'center', fontSize: '11px', padding: '4px 8px' }}>Danger</span>;
+        return <span className="badge" style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: '#ef4444', minWidth: 60, textAlign: 'center', fontSize: '10px', padding: '3px 6px' }}>Danger</span>;
       case 'warning': 
-        return <span className="badge badge-warning" style={{ minWidth: 70, textAlign: 'center', fontSize: '11px', padding: '4px 8px' }}>Warning</span>;
+        return <span className="badge badge-warning" style={{ minWidth: 60, textAlign: 'center', fontSize: '10px', padding: '3px 6px' }}>Warning</span>;
       default: 
         return null;
     }
+  };
+
+  const getTrxBadge = (type) => {
+    return type === 'topup' 
+      ? <span className="badge badge-success" style={{ backgroundColor: 'rgba(16,185,129,0.15)', color: '#059669', fontSize: '10px', padding: '3px 6px' }}>IN</span>
+      : <span className="badge badge-danger" style={{ backgroundColor: 'rgba(239,68,68,0.15)', color: '#dc2626', fontSize: '10px', padding: '3px 6px' }}>OUT</span>;
   };
 
   return (
@@ -200,34 +242,33 @@ export default function DashboardSmartPay() {
           </div>
         </div>
 
-        {/* ── 3. Live Logs: Registrasi & Alerts ─────────────────── */}
-        <div className="grid-2">
+        {/* ── 3. Live Logs: 3 Kolom Responsif ───────────────────── */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
           
           {/* Tabel Registrasi User Baru */}
           <div className="card animate-fade-up" style={{ animationDelay: '0.5s' }}>
             <div className="card-header">
               <div>
-                <div className="card-title">Live Registrasi User</div>
-                <div className="card-subtitle">Log pendaftaran real-time</div>
+                <div className="card-title">Registrasi User</div>
               </div>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#3b82f6', display: 'inline-block', animation: 'pulse-ring 1s infinite' }} />
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#3b82f6', animation: 'pulse-ring 1s infinite' }} />
             </div>
             <div style={{ maxHeight: 280, overflowY: 'auto', paddingRight: 5 }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid var(--card-border)', textAlign: 'left', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                  <tr style={{ borderBottom: '1px solid var(--card-border)', textAlign: 'left', fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
                     <th style={{ paddingBottom: 8, fontWeight: 600 }}>Waktu</th>
                     <th style={{ paddingBottom: 8, fontWeight: 600 }}>User Info</th>
-                    <th style={{ paddingBottom: 8, fontWeight: 600, textAlign: 'right' }}>Status KYC</th>
+                    <th style={{ paddingBottom: 8, fontWeight: 600, textAlign: 'right' }}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {liveRegisters.map((reg, i) => (
                     <tr key={i} style={{ borderBottom: i < liveRegisters.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
-                      <td style={{ padding: '12px 0', fontSize: 12, color: 'var(--text-muted)', fontFamily: 'monospace', width: '70px' }}>{reg.time}</td>
+                      <td style={{ padding: '12px 0', fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace', width: '60px' }}>{reg.time}</td>
                       <td style={{ padding: '12px 0', fontSize: 12 }}>
                         <span style={{ display: 'block', fontWeight: 600, color: '#334155' }}>{reg.name}</span>
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{reg.phone}</span>
+                        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{reg.phone}</span>
                       </td>
                       <td style={{ padding: '12px 0', textAlign: 'right' }}>{getRegBadge(reg.status)}</td>
                     </tr>
@@ -237,19 +278,56 @@ export default function DashboardSmartPay() {
             </div>
           </div>
 
-          {/* Tabel Alert Error (Desain yang kamu buat sebelumnya) */}
+          {/* Tabel Aktivitas Transaksi (Top Up & Pembayaran) */}
+          <div className="card animate-fade-up" style={{ animationDelay: '0.55s' }}>
+            <div className="card-header">
+              <div>
+                <div className="card-title">Live Transaksi</div>
+              </div>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', animation: 'pulse-ring 1s infinite' }} />
+            </div>
+            <div style={{ maxHeight: 280, overflowY: 'auto', paddingRight: 5 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--card-border)', textAlign: 'left', fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                    <th style={{ paddingBottom: 8, fontWeight: 600 }}>Waktu</th>
+                    <th style={{ paddingBottom: 8, fontWeight: 600 }}>Aktivitas</th>
+                    <th style={{ paddingBottom: 8, fontWeight: 600, textAlign: 'right' }}>Nominal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {liveTransactions.map((trx, i) => (
+                    <tr key={i} style={{ borderBottom: i < liveTransactions.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                      <td style={{ padding: '12px 0', fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace', width: '60px' }}>{trx.time}</td>
+                      <td style={{ padding: '12px 0', fontSize: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                          {getTrxBadge(trx.type)}
+                          <span style={{ fontWeight: 600, color: '#334155', fontSize: 11 }}>{trx.user}</span>
+                        </div>
+                        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{trx.action}</span>
+                      </td>
+                      <td style={{ padding: '12px 0', textAlign: 'right', fontSize: 12, fontWeight: 600, color: trx.type === 'topup' ? '#059669' : '#dc2626' }}>
+                        {trx.type === 'topup' ? '+' : '-'}{formatRupiah(trx.amount)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Tabel Alert Error */}
           <div className="card animate-fade-up" style={{ animationDelay: '0.6s' }}>
             <div className="card-header">
               <div>
                 <div className="card-title">Live Alert System</div>
-                <div className="card-subtitle">Log anomali, gagal transaksi, NFC, dll</div>
               </div>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', display: 'inline-block', animation: 'blink 1.5s infinite' }} />
             </div>
             <div style={{ maxHeight: 280, overflowY: 'auto', paddingRight: 5 }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid var(--card-border)', textAlign: 'left', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                  <tr style={{ borderBottom: '1px solid var(--card-border)', textAlign: 'left', fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
                     <th style={{ paddingBottom: 8, fontWeight: 600 }}>Waktu</th>
                     <th style={{ paddingBottom: 8, fontWeight: 600 }}>Pesan Error</th>
                     <th style={{ paddingBottom: 8, fontWeight: 600, textAlign: 'right' }}>Tingkat</th>
@@ -258,10 +336,10 @@ export default function DashboardSmartPay() {
                 <tbody>
                   {liveAlerts.map((a, i) => (
                     <tr key={i} style={{ borderBottom: i < liveAlerts.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
-                       <td style={{ padding: '12px 0', fontSize: 12, color: '#ef4444', fontFamily: 'monospace', width: '70px' }}>{a.time}</td>
-                       <td style={{ padding: '12px 0', fontSize: 12, color: a.type === 'critical' || a.type === 'danger' ? '#646464' : '#646464', fontWeight: 500 }}>
-                          <span style={{display: 'block', fontWeight: 'bold'}}>{a.title}</span>
-                          <span style={{fontSize: 11, color: 'var(--text-muted)', fontWeight: 'normal'}}>{a.desc}</span>
+                       <td style={{ padding: '12px 0', fontSize: 11, color: '#ef4444', fontFamily: 'monospace', width: '60px' }}>{a.time}</td>
+                       <td style={{ padding: '12px 0', fontSize: 12, color: '#646464' }}>
+                          <span style={{display: 'block', fontWeight: 600}}>{a.title}</span>
+                          <span style={{fontSize: 10, color: 'var(--text-muted)'}}>{a.desc}</span>
                        </td>
                        <td style={{ padding: '12px 0', textAlign: 'right' }}>{getAlertBadge(a.type)}</td>
                     </tr>
