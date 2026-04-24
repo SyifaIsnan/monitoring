@@ -23,7 +23,7 @@ export default function App() {
         <Sidebar />
         <div className="main-content">
           <Routes>
-            <Route path="/" element={<Dashboard  />} />
+            <Route path="/" element={<Dashboard />} />
             <Route path="/aizar" element={<Aizar />} />
             <Route path="/nadya" element={<Nadya />} />
             <Route path="/zaki" element={<Zaki />} />

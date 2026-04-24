@@ -106,7 +106,7 @@ function CctvCam({ cam }) {
 }
 
 /* ── Main Dashboard Component ───────────────────────────── */
-export default function DashboardMonitoring() {
+export default function Nadya() {
   const [totalRegisterToday, setTotalRegisterToday] = useState(312); 
   const cctvAktif = CCTV_LIST.filter(c => c.status === 'aktif').length;
 
